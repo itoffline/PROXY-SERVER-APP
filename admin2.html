@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Manager API Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { primary: '#3b82f6', success: '#10b981', danger: '#ef4444' } } }
+        }
+    </script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+        .input { background-color: #0f172a; border: 1px solid #475569; color: #f8fafc; }
+        .input:focus { outline: none; border-color: #3b82f6; ring: 2px solid #3b82f6; }
+        .btn { transition: all 0.2s; }
+        .btn:active { transform: scale(0.98); }
+        pre { background-color: #0f172a; border: 1px solid #334155; }
+    </style>
+</head>
+<body class="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+
+    <!-- Header & Config -->
+    <div class="card rounded-xl p-6 space-y-4">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white">Proxy Manager API Tester</h1>
+            <div id="health-badge" class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-700 text-gray-300">Checking...</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Base URL</label>
+                <input type="text" id="baseUrl" value="http://localhost:8000" class="input w-full rounded-lg px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">API Key (optional)</label>
+                <input type="text" id="apiKey" placeholder="Ваш API ключ" class="input w-full rounded-lg px-3 py-2">
+            </div>
+            <div class="flex items-end">
+                <button onclick="checkHealth()" class="btn w-full bg-primary hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Проверить Health</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Random Proxy Section -->
+        <div class="card rounded-xl p-6 space-y-4">
+            <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Случайный прокси
+            </h2>
+            <div class="grid grid-cols-2 gap-3">
+                <input type="text" id="randCountry" placeholder="Страна (напр. PH, US)" class="input rounded-lg px-3 py-2 uppercase">
+                <input type="text" id="randProtocol" placeholder="Протокол (http, socks5)" class="input rounded-lg px-3 py-2 lowercase">
+            </div>
+            <button onclick="getRandomProxy()" class="btn w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg">Получить случайный прокси</button>
+        </div>
+
+        <!-- Lease Management Section -->
+        <div class="card rounded-xl p-6 space-y-4">
+            <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                Аренда прокси
+            </h2>
+            <div class="space-y-3">
+                <input type="text" id="leaseUserId" value="test_user_123" placeholder="User ID" class="input w-full rounded-lg px-3 py-2">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="leaseCountry" placeholder="Страна (напр. PH)" class="input rounded-lg px-3 py-2 uppercase">
+                    <input type="number" id="leaseTtl" value="300" placeholder="TTL (сек)" class="input rounded-lg px-3 py-2">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="leaseProxy()" class="btn bg-success hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg">Арендовать</button>
+                    <button onclick="checkLease()" class="btn bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg">Статус</button>
+                    <button onclick="releaseLease()" class="btn bg-danger hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">Освободить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Output -->
+    <div class="card rounded-xl p-6 space-y-3">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-white">Ответ сервера</h3>
+            <button onclick="copyResponse()" class="text-sm text-primary hover:text-blue-400 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Копировать JSON
+            </button>
+        </div>
+        <pre id="responseOutput" class="rounded-lg p-4 text-sm text-green-400 overflow-x-auto max-h-96 overflow-y-scroll font-mono">// Здесь появится ответ...</pre>
+    </div>
+
+    <script>
+        const getHeaders = () => {
+            const headers = { 'Content-Type': 'application/json' };
+            const key = document.getElementById('apiKey').value.trim();
+            if (key) headers['x-api-key'] = key;
+            return headers;
+        };
+
+        const getBase = () => document.getElementById('baseUrl').value.replace(/\/$/, '');
+
+        const showResponse = (data, isError = false) => {
+            const el = document.getElementById('responseOutput');
+            el.className = `rounded-lg p-4 text-sm overflow-x-auto max-h-96 overflow-y-scroll font-mono ${isError ? 'text-red-400' : 'text-green-400'}`;
+            el.textContent = JSON.stringify(data, null, 2);
+        };
+
+        const showError = (err) => showResponse({ error: err.message || err }, true);
+
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${getBase()}/health`);
+                const data = await res.json();
+                showResponse(data);
+                const badge = document.getElementById('health-badge');
+                if (data.status === 'ok') {
+                    badge.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-emerald-900 text-emerald-300 border border-emerald-700';
+                    badge.textContent = `OK (Proxies: ${data.proxy_count})`;
+                } else {
+                    badge.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-yellow-900 text-yellow-300 border border-yellow-700';
+                    badge.textContent = 'Degraded';
+                }
+            } catch (err) {
+                showError(err);
+                const badge = document.getElementById('health-badge');
+                badge.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-red-900 text-red-300 border border-red-700';
+                badge.textContent = 'Offline';
+            }
+        }
+
+        async function getRandomProxy() {
+            try {
+                const country = document.getElementById('randCountry').value.trim();
+                const protocol = document.getElementById('randProtocol').value.trim();
+                const params = new URLSearchParams();
+                if (country) params.append('country', country);
+                if (protocol) params.append('protocol', protocol);
+                
+                const res = await fetch(`${getBase()}/api/v1/proxies/random?${params}`, { headers: getHeaders() });
+                showResponse(await res.json(), !res.ok);
+            } catch (err) { showError(err); }
+        }
+
+        async function leaseProxy() {
+            try {
+                const body = {
+                    user_id: document.getElementById('leaseUserId').value.trim() || 'anon',
+                    ttl: parseInt(document.getElementById('leaseTtl').value) || 300
+                };
+                const country = document.getElementById('leaseCountry').value.trim();
+                if (country) body.country = country;
+
+                const res = await fetch(`${getBase()}/api/v1/proxies/lease`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                showResponse(await res.json(), !res.ok);
+            } catch (err) { showError(err); }
+        }
+
+        async function checkLease() {
+            try {
+                const userId = document.getElementById('leaseUserId').value.trim() || 'anon';
+                const res = await fetch(`${getBase()}/api/v1/proxies/lease/${userId}/status`, { headers: getHeaders() });
+                showResponse(await res.json(), !res.ok);
+            } catch (err) { showError(err); }
+        }
+
+        async function releaseLease() {
+            try {
+                const userId = document.getElementById('leaseUserId').value.trim() || 'anon';
+                const res = await fetch(`${getBase()}/api/v1/proxies/lease/${userId}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+                showResponse(await res.json(), !res.ok);
+            } catch (err) { showError(err); }
+        }
+
+        function copyResponse() {
+            const text = document.getElementById('responseOutput').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('button[onclick="copyResponse()"]');
+                const original = btn.innerHTML;
+                btn.innerHTML = '<span class="text-success">Скопировано!</span>';
+                setTimeout(() => btn.innerHTML = original, 1500);
+            });
+        }
+
+        // Auto-check health on load
+        window.addEventListener('DOMContentLoaded', checkHealth);
+    </script>
+</body>
+</html>

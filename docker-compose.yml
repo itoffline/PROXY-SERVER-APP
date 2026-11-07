@@ -1,0 +1,58 @@
+services:
+  # 1. База данных для управления арендой прокси
+  redis:
+    image: redis:7-alpine
+    container_name: proxy-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+  # 2. Сервер, который скачивает и раздает список прокси (start.sh)
+  proxy-source:
+    build: .
+    container_name: proxy-source
+    restart: unless-stopped
+    command: ["/app/start.sh"]
+    volumes:
+      - proxy-list-data:/data
+    environment:
+      TZ: Europe/Moscow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/proxies.json', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # 3. FastAPI сервер (server.py)
+  proxy-api:
+    build: .
+    container_name: proxy-api
+    restart: unless-stopped
+    # Запуск uvicorn вместо start.sh
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: Europe/Moscow
+      # Используем внутренние имена сервисов Docker для связи
+      PROXY_SOURCE_URL: "http://proxy-source:8080/proxies.json"
+      REDIS_URL: "redis://redis:6379/0"
+      # API_KEY: "your-secret-key" # Раскомментируйте при необходимости
+      CACHE_UPDATE_INTERVAL: "300"
+    depends_on:
+      proxy-source:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  proxy-list-data:
+  redis-data:
+  

@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Proxy Manager · Console</title>
+    <style>
+        :root {
+            --bg: #070a12;
+            --panel: rgba(255, 255, 255, .045);
+            --panel2: rgba(255, 255, 255, .025);
+            --border: rgba(255, 255, 255, .09);
+            --border-h: rgba(255, 255, 255, .18);
+            --txt: #e7ecf7;
+            --muted: #8892a8;
+            --acc: #6366f1;
+            --acc2: #22d3ee;
+            --ok: #10b981;
+            --warn: #f59e0b;
+            --err: #f43f5e;
+            --r: 16px;
+            --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--txt);
+            min-height: 100vh;
+            padding: 22px;
+            font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .aurora {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            filter: blur(90px);
+            opacity: .55
+        }
+
+        .aurora i {
+            position: absolute;
+            display: block;
+            border-radius: 50%;
+            animation: float 22s ease-in-out infinite
+        }
+
+        .aurora i:nth-child(1) {
+            width: 520px;
+            height: 520px;
+            background: #4f46e5;
+            top: -140px;
+            left: -80px
+        }
+
+        .aurora i:nth-child(2) {
+            width: 460px;
+            height: 460px;
+            background: #0891b2;
+            top: 20%;
+            right: -120px;
+            animation-delay: -7s
+        }
+
+        .aurora i:nth-child(3) {
+            width: 420px;
+            height: 420px;
+            background: #7c3aed;
+            bottom: -160px;
+            left: 35%;
+            animation-delay: -13s
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1)
+            }
+
+            33% {
+                transform: translate(60px, -50px) scale(1.12)
+            }
+
+            66% {
+                transform: translate(-50px, 40px) scale(.92)
+            }
+        }
+
+        .wrap {
+            max-width: 1240px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px
+        }
+
+        .glass {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            backdrop-filter: blur(14px)
+        }
+
+        .pad {
+            padding: 20px
+        }
+
+        /* header */
+        header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 16px 20px
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 17px;
+            letter-spacing: .2px
+        }
+
+        .logo .mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--acc), var(--acc2));
+            box-shadow: 0 8px 24px -8px var(--acc);
+            font-size: 19px
+        }
+
+        .logo small {
+            display: block;
+            font-weight: 500;
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: .6px;
+            text-transform: uppercase
+        }
+
+        .spacer {
+            flex: 1
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 13px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: var(--panel2);
+            white-space: nowrap
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted)
+        }
+
+        .pill.ok {
+            color: #6ee7b7;
+            border-color: rgba(16, 185, 129, .35);
+            background: rgba(16, 185, 129, .1)
+        }
+
+        .pill.ok .dot {
+            background: var(--ok);
+            box-shadow: 0 0 10px var(--ok);
+            animation: pulse 2s infinite
+        }
+
+        .pill.warn {
+            color: #fcd34d;
+            border-color: rgba(245, 158, 11, .35);
+            background: rgba(245, 158, 11, .1)
+        }
+
+        .pill.warn .dot {
+            background: var(--warn)
+        }
+
+        .pill.err {
+            color: #fda4af;
+            border-color: rgba(244, 63, 94, .35);
+            background: rgba(244, 63, 94, .1)
+        }
+
+        .pill.err .dot {
+            background: var(--err)
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: .35
+            }
+        }
+
+        /* controls */
+        label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-weight: 600
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, .35);
+            border: 1px solid var(--border);
+            color: var(--txt);
+            font: inherit;
+            transition: .18s
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--acc);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, .18);
+            background: rgba(0, 0, 0, .5)
+        }
+
+        input::placeholder {
+            color: #5b6478
+        }
+
+        select option {
+            background: #0d1220
+        }
+
+        .grid {
+            display: grid;
+            gap: 12px
+        }
+
+        .g2 {
+            grid-template-columns: repeat(2, 1fr)
+        }
+
+        .g3 {
+            grid-template-columns: repeat(3, 1fr)
+        }
+
+        .g4 {
+            grid-template-columns: repeat(4, 1fr)
+        }
+
+        @media(max-width:860px) {
+
+            .g3,
+            .g4,
+            .g2 {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .row>* {
+            flex: 1;
+            min-width: 130px
+        }
+
+        button {
+            cursor: pointer;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font: 600 13px/1 inherit;
+            color: var(--txt);
+            background: var(--panel2);
+            transition: .18s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px
+        }
+
+        button:hover {
+            border-color: var(--border-h);
+            background: rgba(255, 255, 255, .08);
+            transform: translateY(-1px)
+        }
+
+        button:active {
+            transform: translateY(0) scale(.985)
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        .b-acc {
+            background: linear-gradient(135deg, var(--acc), #8b5cf6);
+            border-color: transparent;
+            box-shadow: 0 8px 22px -12px var(--acc)
+        }
+
+        .b-ok {
+            background: linear-gradient(135deg, #059669, var(--ok));
+            border-color: transparent;
+            box-shadow: 0 8px 22px -12px var(--ok)
+        }
+
+        .b-err {
+            background: linear-gradient(135deg, #e11d48, var(--err));
+            border-color: transparent;
+            box-shadow: 0 8px 22px -12px var(--err)
+        }
+
+        .b-warn {
+            background: linear-gradient(135deg, #d97706, var(--warn));
+            border-color: transparent;
+            color: #1a1205;
+            box-shadow: 0 8px 22px -12px var(--warn)
+        }
+
+        .b-cy {
+            background: linear-gradient(135deg, #0891b2, var(--acc2));
+            border-color: transparent;
+            color: #04212a;
+            box-shadow: 0 8px 22px -12px var(--acc2)
+        }
+
+        .b-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 8px
+        }
+
+        .spin {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, .3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: sp .7s linear infinite;
+            display: none
+        }
+
+        .loading .spin {
+            display: block
+        }
+
+        .loading .lbl {
+            opacity: .75
+        }
+
+        @keyframes sp {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* stats */
+        .stat {
+            padding: 16px 18px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .stat:before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 3px;
+            background: linear-gradient(var(--acc), var(--acc2))
+        }
+
+        .stat .k {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        .stat .v {
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 6px;
+            font-variant-numeric: tabular-nums
+        }
+
+        .stat .s {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px
+        }
+
+        /* tabs */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            padding: 6px;
+            overflow-x: auto
+        }
+
+        .tabs button {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            white-space: nowrap;
+            padding: 10px 16px;
+            border-radius: 11px
+        }
+
+        .tabs button:hover {
+            background: rgba(255, 255, 255, .05);
+            color: var(--txt);
+            transform: none
+        }
+
+        .tabs button.on {
+            background: linear-gradient(135deg, rgba(99, 102, 241, .25), rgba(34, 211, 238, .15));
+            color: #fff;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12)
+        }
+
+        .panel {
+            display: none;
+            animation: in .3s ease
+        }
+
+        .panel.on {
+            display: block
+        }
+
+        @keyframes in {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+        }
+
+        h2 {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 16px
+        }
+
+        h2 em {
+            font-style: normal;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            background: rgba(255, 255, 255, .07);
+            font-size: 14px
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 10px
+        }
+
+        /* proxy card */
+        .pcard {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, .09), rgba(34, 211, 238, .04))
+        }
+
+        .pcard .top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap
+        }
+
+        .flag {
+            font-size: 34px;
+            line-height: 1
+        }
+
+        .addr {
+            font: 700 20px/1.2 var(--mono);
+            letter-spacing: -.3px
+        }
+
+        .chips {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+            margin-top: 8px
+        }
+
+        .chip {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 9px;
+            border-radius: 7px;
+            background: rgba(255, 255, 255, .07);
+            border: 1px solid var(--border);
+            color: #c7d0e2
+        }
+
+        .chip.p {
+            color: #a5b4fc;
+            border-color: rgba(99, 102, 241, .35);
+            background: rgba(99, 102, 241, .12);
+            text-transform: uppercase
+        }
+
+        .chip.g {
+            color: #6ee7b7;
+            border-color: rgba(16, 185, 129, .3);
+            background: rgba(16, 185, 129, .1)
+        }
+
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--border)
+        }
+
+        .meta div span {
+            display: block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            color: var(--muted);
+            margin-bottom: 3px
+        }
+
+        .meta div b {
+            font-weight: 600;
+            font-size: 13px;
+            word-break: break-word
+        }
+
+        .empty {
+            padding: 34px;
+            text-align: center;
+            color: var(--muted);
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+            font-size: 13px
+        }
+
+        /* table */
+        .tw {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-height: 440px;
+            overflow-y: auto
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: #0e1424;
+            text-align: left;
+            padding: 11px 13px;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+            z-index: 1
+        }
+
+        td {
+            padding: 10px 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, .045);
+            white-space: nowrap
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, .035)
+        }
+
+        td.m {
+            font-family: var(--mono);
+            font-size: 12.5px
+        }
+
+        .bar {
+            height: 6px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, .07);
+            overflow: hidden
+        }
+
+        .bar i {
+            display: block;
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, var(--acc), var(--acc2));
+            transition: width .6s
+        }
+
+        .brow {
+            display: grid;
+            grid-template-columns: 130px 1fr 60px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 9px;
+            font-size: 12.5px
+        }
+
+        .brow b {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        /* ip result */
+        .ipbig {
+            font: 800 34px/1 var(--mono);
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff, var(--acc2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        /* console */
+        .chead {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap
+        }
+
+        .meth {
+            font: 700 10.5px/1 var(--mono);
+            padding: 5px 8px;
+            border-radius: 6px;
+            background: rgba(99, 102, 241, .18);
+            color: #a5b4fc
+        }
+
+        .url {
+            font: 12px var(--mono);
+            color: var(--muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 46vw
+        }
+
+        .code {
+            font: 700 11px var(--mono);
+            padding: 4px 8px;
+            border-radius: 6px
+        }
+
+        .code.s2 {
+            background: rgba(16, 185, 129, .15);
+            color: #6ee7b7
+        }
+
+        .code.s4 {
+            background: rgba(244, 63, 94, .15);
+            color: #fda4af
+        }
+
+        pre {
+            margin: 0;
+            padding: 16px;
+            max-height: 400px;
+            overflow: auto;
+            font: 12.5px/1.65 var(--mono);
+            white-space: pre-wrap;
+            word-break: break-word
+        }
+
+        .j-key {
+            color: #7dd3fc
+        }
+
+        .j-str {
+            color: #86efac
+        }
+
+        .j-num {
+            color: #fcd34d
+        }
+
+        .j-bool {
+            color: #f0abfc
+        }
+
+        .j-null {
+            color: #94a3b8
+        }
+
+        ::-webkit-scrollbar {
+            width: 9px;
+            height: 9px
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .14);
+            border-radius: 9px
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, .25)
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        /* toast */
+        .toasts {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 99
+        }
+
+        .toast {
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #111827ee;
+            border: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 18px 40px -18px #000;
+            animation: tin .3s ease;
+            display: flex;
+            gap: 9px;
+            align-items: center;
+            max-width: 340px
+        }
+
+        .toast.ok {
+            border-color: rgba(16, 185, 129, .4)
+        }
+
+        .toast.err {
+            border-color: rgba(244, 63, 94, .4)
+        }
+
+        @keyframes tin {
+            from {
+                opacity: 0;
+                transform: translateX(30px)
+            }
+        }
+
+        .hide {
+            display: none !important
+        }
+    </style>
+</head>
+
+<body>
+    <div class="aurora"><i></i><i></i><i></i></div>
+
+    <div class="wrap">
+
+        <header class="glass">
+            <div class="logo">
+                <div class="mark">🛰</div>
+                <div>Proxy Manager<small>API Console v1.0</small></div>
+            </div>
+            <div class="spacer"></div>
+            <div class="pill" id="healthPill"><span class="dot"></span><span id="healthTxt">проверка…</span></div>
+            <button class="b-sm" onclick="toggle('settings')">⚙ Настройки</button>
+            <button class="b-sm b-acc" id="btnHealth" onclick="act(this,checkHealth)"><span class="spin"></span><span
+                    class="lbl">↻ Health</span></button>
+        </header>
+
+        <section class="glass pad hide" id="settings">
+            <div class="grid g3">
+                <div><label>Base URL</label><input id="baseUrl" value="http://localhost:8000"></div>
+                <div><label>API Key (x-api-key)</label><input id="apiKey" placeholder="не задан"></div>
+                <div style="display:flex;align-items:flex-end;gap:10px">
+                    <button class="b-ok" onclick="saveCfg()"><span class="lbl">💾 Сохранить</span></button>
+                    <button onclick="window.open(getBase()+'/docs','_blank')">📚 Swagger</button>
+                </div>
+            </div>
+            <div class="hint">Настройки хранятся в localStorage браузера.</div>
+        </section>
+
+        <div class="grid g4">
+            <div class="glass stat">
+                <div class="k">Прокси в пуле</div>
+                <div class="v" id="sTotal">—</div>
+                <div class="s" id="sTotalSub">нет данных</div>
+            </div>
+            <div class="glass stat">
+                <div class="k">Redis</div>
+                <div class="v" id="sRedis">—</div>
+                <div class="s">хранилище аренды</div>
+            </div>
+            <div class="glass stat">
+                <div class="k">Обновлено</div>
+                <div class="v" id="sRefresh" style="font-size:19px">—</div>
+                <div class="s" id="sRefreshSub">кэш источника</div>
+            </div>
+            <div class="glass stat">
+                <div class="k">Моя аренда</div>
+                <div class="v" id="sLease">—</div>
+                <div class="s" id="sLeaseSub">TTL не активен</div>
+            </div>
+        </div>
+
+        <nav class="glass tabs">
+            <button class="on" data-tab="random">🎲 Случайный</button>
+            <button data-tab="list">📋 Список</button>
+            <button data-tab="lease">🔐 Аренда</button>
+            <button data-tab="ip">🌍 IP Check</button>
+            <button data-tab="stats">📊 Статистика</button>
+        </nav>
+
+        <!-- RANDOM -->
+        <div class="panel on" id="tab-random">
+            <div class="glass pad">
+                <h2><em>🎲</em>Случайный прокси</h2>
+                <div class="grid g4">
+                    <div><label>Страна</label><input id="rCountry" placeholder="PH, US, DE"
+                            style="text-transform:uppercase"></div>
+                    <div><label>Протокол</label><select id="rProto">
+                            <option value="">любой</option>
+                            <option>http</option>
+                            <option>socks4</option>
+                            <option>socks5</option>
+                        </select></div>
+                    <div><label>Max timeout, сек</label><input id="rTimeout" type="number" step="0.01"
+                            placeholder="напр. 3"></div>
+                    <div style="display:flex;align-items:flex-end"><button class="b-acc" id="btnRand" style="width:100%"
+                            onclick="act(this,getRandom)"><span class="spin"></span><span
+                                class="lbl">Получить</span></button></div>
+                </div>
+                <div id="randOut" style="margin-top:18px">
+                    <div class="empty">Нажмите «Получить», чтобы выбрать случайный прокси из пула</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIST -->
+        <div class="panel" id="tab-list">
+            <div class="glass pad">
+                <h2><em>📋</em>Список прокси</h2>
+                <div class="grid g4">
+                    <div><label>Страна</label><input id="lCountry" placeholder="US" style="text-transform:uppercase">
+                    </div>
+                    <div><label>Протокол</label><select id="lProto">
+                            <option value="">любой</option>
+                            <option>http</option>
+                            <option>socks4</option>
+                            <option>socks5</option>
+                        </select></div>
+                    <div><label>Max timeout</label><input id="lTimeout" type="number" step="0.01" placeholder="сек">
+                    </div>
+                    <div><label>Лимит</label><input id="lLimit" type="number" value="25" min="1" max="10000"></div>
+                </div>
+                <div class="row" style="margin-top:12px">
+                    <button class="b-acc" id="btnList" onclick="act(this,()=>loadList(0))"><span
+                            class="spin"></span><span class="lbl">🔍 Найти</span></button>
+                    <button onclick="loadList(Math.max(0,state.offset-state.limit))">← Назад</button>
+                    <button onclick="loadList(state.offset+state.limit)">Вперёд →</button>
+                </div>
+                <div class="hint" id="listInfo">Фильтры применяются на стороне API.</div>
+                <div class="tw" style="margin-top:14px">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Адрес</th>
+                                <th>Протокол</th>
+                                <th>Страна</th>
+                                <th>Город</th>
+                                <th>Timeout</th>
+                                <th>ASN</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;color:var(--muted);padding:28px">Нет данных —
+                                    выполните поиск</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEASE -->
+        <div class="panel" id="tab-lease">
+            <div class="glass pad">
+                <h2><em>🔐</em>Аренда прокси</h2>
+                <div class="grid g4">
+                    <div><label>User ID</label><input id="uId" value="test_user_123"></div>
+                    <div><label>Страна</label><input id="uCountry" placeholder="любая" style="text-transform:uppercase">
+                    </div>
+                    <div><label>Протокол</label><select id="uProto">
+                            <option value="">любой</option>
+                            <option>http</option>
+                            <option>socks4</option>
+                            <option>socks5</option>
+                        </select></div>
+                    <div><label>TTL, сек (60–3600)</label><input id="uTtl" type="number" value="600" min="60"
+                            max="3600"></div>
+                </div>
+                <div class="row" style="margin-top:12px">
+                    <button class="b-ok" id="btnLease" onclick="act(this,leaseProxy)"><span class="spin"></span><span
+                            class="lbl">🔒 Арендовать</span></button>
+                    <button id="btnStatus" onclick="act(this,leaseStatus)"><span class="spin"></span><span
+                            class="lbl">📡 Статус</span></button>
+                    <button class="b-cy" id="btnRenew" onclick="act(this,renewLease)"><span class="spin"></span><span
+                            class="lbl">⏱ Продлить</span></button>
+                    <button class="b-err" id="btnRelease" onclick="act(this,releaseLease)"><span
+                            class="spin"></span><span class="lbl">🔓 Освободить</span></button>
+                </div>
+                <div id="leaseOut" style="margin-top:18px">
+                    <div class="empty">Активной аренды нет</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IP -->
+        <div class="panel" id="tab-ip">
+            <div class="glass pad">
+                <h2><em>🌍</em>Проверка внешнего IP через прокси</h2>
+                <div class="grid g3">
+                    <div><label>Режим</label><select id="ipMode" onchange="ipModeSwitch()">
+                            <option value="lease">Арендованный прокси (user_id)</option>
+                            <option value="random">Случайный прокси (фильтры)</option>
+                        </select></div>
+                    <div id="ipUserBox"><label>User ID</label><input id="ipUser" value="test_user_123"></div>
+                    <div id="ipFilterBox" class="hide"><label>Страна / Протокол</label>
+                        <div style="display:flex;gap:8px"><input id="ipCountry" placeholder="US"
+                                style="text-transform:uppercase">
+                            <select id="ipProto">
+                                <option value="">любой</option>
+                                <option>http</option>
+                                <option>socks4</option>
+                                <option>socks5</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div><label>Таймаут запроса</label><input value="10 сек (server-side)" disabled></div>
+                </div>
+                <div class="row" style="margin-top:12px">
+                    <button class="b-warn" id="btnIpFull" onclick="act(this,()=>checkIp(false))"><span
+                            class="spin"></span><span class="lbl">🔎 Полная проверка</span></button>
+                    <button class="b-cy" id="btnIpSimple" onclick="act(this,()=>checkIp(true))"><span
+                            class="spin"></span><span class="lbl">⚡ Только IP</span></button>
+                </div>
+                <div id="ipOut" style="margin-top:18px">
+                    <div class="empty">Результат проверки появится здесь</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="panel" id="tab-stats">
+            <div class="glass pad">
+                <h2><em>📊</em>Статистика пула</h2>
+                <div class="row">
+                    <button class="b-acc" id="btnStats" onclick="act(this,loadStats)"><span class="spin"></span><span
+                            class="lbl">📈 Загрузить</span></button>
+                    <button class="b-warn" id="btnRefresh" onclick="act(this,refreshCache)"><span
+                            class="spin"></span><span class="lbl">♻ Обновить кэш</span></button>
+                </div>
+                <div class="grid g2" style="margin-top:18px">
+                    <div><label>Протоколы</label>
+                        <div id="stProto">
+                            <div class="empty">—</div>
+                        </div>
+                    </div>
+                    <div><label>Топ стран</label>
+                        <div id="stCountry">
+                            <div class="empty">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONSOLE -->
+        <section class="glass">
+            <div class="chead">
+                <span class="meth" id="cMeth">GET</span>
+                <span class="url" id="cUrl">ожидание запроса…</span>
+                <span class="code hide" id="cCode"></span>
+                <span class="pill hide" id="cTime" style="padding:4px 10px;font-size:11px"></span>
+                <div class="spacer"></div>
+                <button class="b-sm" onclick="copyOut()">⧉ Копировать</button>
+                <button class="b-sm" onclick="clearOut()">✕ Очистить</button>
+            </div>
+            <pre id="out"><span class="j-null">// Ответ сервера появится здесь</span></pre>
+        </section>
+    </div>
+
+    <div class="toasts" id="toasts"></div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const state = { offset: 0, limit: 25, leaseExp: 0, lastOut: null };
+
+        /* ---------- config ---------- */
+        function loadCfg() {
+            $('baseUrl').value = localStorage.getItem('pm_url') || 'http://localhost:8000';
+            $('apiKey').value = localStorage.getItem('pm_key') || '';
+        }
+        function saveCfg() {
+            localStorage.setItem('pm_url', $('baseUrl').value.trim());
+            localStorage.setItem('pm_key', $('apiKey').value.trim()); toast('Настройки сохранены', 'ok'); checkHealth();
+        }
+        const getBase = () => ($('baseUrl').value.trim() || 'http://localhost:8000').replace(/\/+$/, '');
+        function headers() { const h = { 'Content-Type': 'application/json' }; const k = $('apiKey').value.trim(); if (k) h['x-api-key'] = k; return h; }
+        const toggle = id => $(id).classList.toggle('hide');
+
+        /* ---------- ui helpers ---------- */
+        function toast(msg, type = 'ok') {
+            const t = document.createElement('div'); t.className = 'toast ' + type;
+            t.innerHTML = `<span>${type === 'ok' ? '✅' : '⛔'}</span><span>${msg}</span>`; $('toasts').appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(30px)'; t.style.transition = '.3s'; setTimeout(() => t.remove(), 300) }, 3200);
+        }
+        async function act(btn, fn) {
+            btn.classList.add('loading'); btn.disabled = true;
+            try { await fn(); } finally { btn.classList.remove('loading'); btn.disabled = false; }
+        }
+        function hl(o) {
+            let s = JSON.stringify(o, null, 2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return s.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+                let c = 'num'; if (/^"/.test(m)) c = /:$/.test(m) ? 'key' : 'str'; else if (/true|false/.test(m)) c = 'bool'; else if (/null/.test(m)) c = 'null';
+                return `<span class="j-${c}">${m}</span>`;
+            });
+        }
+        function render(data, status, ms, method, url) {
+            state.lastOut = data;
+            $('out').innerHTML = hl(data); $('cMeth').textContent = method; $('cUrl').textContent = url;
+            const c = $('cCode'); c.className = 'code ' + (status < 400 ? 's2' : 's4'); c.textContent = status || 'ERR';
+            const t = $('cTime'); t.classList.remove('hide'); t.textContent = ms + ' ms';
+        }
+        function clearOut() { $('out').innerHTML = '<span class="j-null">// очищено</span>'; $('cCode').classList.add('hide'); $('cTime').classList.add('hide'); $('cUrl').textContent = 'ожидание запроса…'; }
+        function copyOut() { navigator.clipboard.writeText(JSON.stringify(state.lastOut ?? {}, null, 2)).then(() => toast('JSON скопирован')); }
+        function copyTxt(s) { navigator.clipboard.writeText(s).then(() => toast('Скопировано: ' + s)); }
+        const flag = c => c ? String.fromCodePoint(...[...c.toUpperCase()].map(x => 127397 + x.charCodeAt())) : '🌐';
+        const esc = s => String(s ?? '—').replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
+        const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('ru-RU') : '—';
+
+        /* ---------- core request ---------- */
+        async function api(path, { method = 'GET', body = null, params = null } = {}) {
+            const qs = params ? '?' + new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v != null))) : '';
+            const url = getBase() + path + qs.replace(/\?$/, '');
+            const t0 = performance.now();
+            try {
+                const res = await fetch(url, { method, headers: headers(), body: body ? JSON.stringify(body) : null });
+                let data; try { data = await res.json(); } catch { data = { detail: 'Некорректный JSON в ответе' }; }
+                render(data, res.status, Math.round(performance.now() - t0), method, url);
+                if (!res.ok) throw new Error(data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'HTTP ' + res.status);
+                return data;
+            } catch (e) {
+                if (!state.lastOut || e.message.includes('Failed to fetch'))
+                    render({ error: e.message, hint: 'Сервер недоступен или заблокирован CORS' }, 0, Math.round(performance.now() - t0), method, url);
+                throw e;
+            }
+        }
+        const guard = fn => async (...a) => { try { return await fn(...a); } catch (e) { toast(e.message, 'err'); } };
+
+        /* ---------- proxy card ---------- */
+        function proxyCard(p, extra = '') {
+            const addr = `${p.host}:${p.port}`;
+            const asn = p.asn?.autonomous_system_organization;
+            return `<div class="pcard">
+    <div class="top">
+      <div class="flag">${flag(p.country)}</div>
+      <div style="flex:1;min-width:200px">
+        <div class="addr">${esc(addr)}</div>
+        <div class="chips">
+          <span class="chip p">${esc(p.protocol)}</span>
+          ${p.timeout != null ? `<span class="chip ${p.timeout < 2 ? 'g' : ''}">⚡ ${Number(p.timeout).toFixed(2)}s</span>` : ''}
+          <span class="chip">${esc(p.country || '??')} · ${esc(p.city || '—')}</span>
+          ${p.username ? '<span class="chip">🔑 auth</span>' : ''}
+        </div>
+      </div>
+      <button class="b-sm" onclick="copyTxt('${addr}')">⧉ Copy</button>
+    </div>
+    <div class="meta">
+      <div><span>Exit IP</span><b>${esc(p.exit_ip)}</b></div>
+      <div><span>Страна</span><b>${esc(p.geolocation?.country?.names?.en || p.country)}</b></div>
+      <div><span>ASN</span><b>${esc(asn)}</b></div>
+      <div><span>Timezone</span><b>${esc(p.geolocation?.location?.time_zone)}</b></div>
+      ${extra}
+    </div>
+  </div>`;
+        }
+
+        /* ---------- endpoints ---------- */
+        const checkHealth = guard(async () => {
+            const d = await api('/health');
+            const ok = d.status === 'ok';
+            $('healthPill').className = 'pill ' + (ok ? 'ok' : 'warn');
+            $('healthTxt').textContent = ok ? `online · ${d.proxy_count} прокси` : 'degraded';
+            $('sTotal').textContent = d.proxy_count ?? '—';
+            $('sTotalSub').textContent = 'источник активен';
+            $('sRedis').innerHTML = d.redis ? '<span style="color:#6ee7b7">OK</span>' : '<span style="color:#fda4af">DOWN</span>';
+            $('sRefresh').textContent = fmtTime(d.last_refresh);
+            $('sRefreshSub').textContent = d.last_refresh ? new Date(d.last_refresh).toLocaleDateString('ru-RU') : 'нет данных';
+        });
+
+        const getRandom = guard(async () => {
+            const d = await api('/api/v1/proxies/random', { params: { country: $('rCountry').value.trim(), protocol: $('rProto').value, max_timeout: $('rTimeout').value } });
+            $('randOut').innerHTML = proxyCard(d.proxy) + `<div class="hint">Доступно по фильтру: <b>${d.total_available}</b></div>`;
+            toast('Прокси получен');
+        });
+
+        const loadList = guard(async (offset = 0) => {
+            state.limit = Math.max(1, parseInt($('lLimit').value) || 25); state.offset = offset;
+            const d = await api('/api/v1/proxies', {
+                params: {
+                    country: $('lCountry').value.trim(), protocol: $('lProto').value,
+                    max_timeout: $('lTimeout').value, limit: state.limit, offset
+                }
+            });
+            $('listInfo').innerHTML = `Найдено <b>${d.total}</b> · показано ${d.items.length ? offset + 1 : 0}–${offset + d.items.length}`;
+            $('listBody').innerHTML = d.items.length ? d.items.map((p, i) => `<tr>
+      <td style="color:var(--muted)">${offset + i + 1}</td>
+      <td class="m">${esc(p.host)}:${esc(p.port)}</td>
+      <td><span class="chip p">${esc(p.protocol)}</span></td>
+      <td>${flag(p.country)} ${esc(p.country)}</td>
+      <td>${esc(p.city)}</td>
+      <td class="m" style="color:${p.timeout < 2 ? '#6ee7b7' : '#fcd34d'}">${p.timeout != null ? Number(p.timeout).toFixed(2) : '—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--muted)">${esc(p.asn?.autonomous_system_organization)}</td>
+      <td><button class="b-sm" onclick="copyTxt('${p.host}:${p.port}')">⧉</button></td>
+    </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:26px">Ничего не найдено</td></tr>';
+        });
+
+        function leaseCard(d) {
+            const ttl = d.ttl > 0 ? d.ttl : 0; state.leaseExp = Date.now() + ttl * 1000;
+            $('sLease').textContent = ttl + 's'; $('sLeaseSub').textContent = d.proxy?.host || '—';
+            return proxyCard(d.proxy, `<div><span>TTL</span><b id="ttlLive" style="color:#6ee7b7">${ttl}s</b></div>
+    <div><span>User ID</span><b>${esc(d.user_id)}</b></div>`);
+        }
+        const leaseProxy = guard(async () => {
+            const body = { user_id: $('uId').value.trim() || 'anon', ttl: parseInt($('uTtl').value) || 600 };
+            if ($('uCountry').value.trim()) body.country = $('uCountry').value.trim();
+            if ($('uProto').value) body.protocol = $('uProto').value;
+            const d = await api('/api/v1/proxies/lease', { method: 'POST', body });
+            $('leaseOut').innerHTML = leaseCard(d);
+            toast(d.created ? 'Новая аренда создана' : 'Возвращена существующая аренда');
+        });
+        const leaseStatus = guard(async () => {
+            const d = await api(`/api/v1/proxies/lease/${encodeURIComponent($('uId').value.trim())}/status`);
+            if (d.active) { $('leaseOut').innerHTML = leaseCard(d); toast('Аренда активна'); }
+            else { $('leaseOut').innerHTML = '<div class="empty">Аренда не активна</div>'; state.leaseExp = 0; $('sLease').textContent = '—'; $('sLeaseSub').textContent = 'TTL не активен'; }
+        });
+        const renewLease = guard(async () => {
+            const d = await api(`/api/v1/proxies/lease/${encodeURIComponent($('uId').value.trim())}/renew`, { method: 'POST', body: { ttl: parseInt($('uTtl').value) || 600 } });
+            $('leaseOut').innerHTML = leaseCard(d); toast('Аренда продлена');
+        });
+        const releaseLease = guard(async () => {
+            const d = await api(`/api/v1/proxies/lease/${encodeURIComponent($('uId').value.trim())}`, { method: 'DELETE' });
+            $('leaseOut').innerHTML = '<div class="empty">Аренда освобождена</div>'; state.leaseExp = 0;
+            $('sLease').textContent = '—'; $('sLeaseSub').textContent = 'TTL не активен';
+            toast(d.released ? 'Прокси освобождён' : 'Активной аренды не было');
+        });
+
+        function ipParams() {
+            const p = {};
+            if ($('ipMode').value === 'lease') p.user_id = $('ipUser').value.trim();
+            else { p.country = $('ipCountry').value.trim(); p.protocol = $('ipProto').value; }
+            return p;
+        }
+        function ipModeSwitch() {
+            const l = $('ipMode').value === 'lease';
+            $('ipUserBox').classList.toggle('hide', !l); $('ipFilterBox').classList.toggle('hide', l);
+        }
+        const checkIp = guard(async (simple) => {
+            const path = simple ? '/api/v1/proxies/check-ip/simple' : '/api/v1/proxies/check-ip';
+            const d = await api(path, { method: simple ? 'GET' : 'POST', params: ipParams() });
+            const info = d.external_ip_info?.['ip-api'] || {};
+            const ip = d.external_ip || d.external_ip_info?.httpbin?.origin || info.query;
+            if (!ip) { $('ipOut').innerHTML = `<div class="empty">IP не определён — прокси, вероятно, не отвечает. Детали в консоли ниже.</div>`; toast('Прокси не ответил', 'err'); return; }
+            $('ipOut').innerHTML = `<div class="pcard">
+    <div class="top"><div class="flag">${flag(info.countryCode || d.proxy?.country)}</div>
+      <div style="flex:1;min-width:200px"><div class="ipbig">${esc(ip)}</div>
+        <div class="chips"><span class="chip g">✔ соединение установлено</span>
+        <span class="chip">via ${esc(d.proxy?.host)}:${esc(d.proxy?.port)}</span>
+        <span class="chip p">${esc(d.proxy?.protocol)}</span></div></div>
+      <button class="b-sm" onclick="copyTxt('${ip}')">⧉ IP</button></div>
+    <div class="meta">
+      <div><span>Страна</span><b>${esc(info.country || d.proxy?.country)}</b></div>
+      <div><span>Город</span><b>${esc(info.city || d.proxy?.city)}</b></div>
+      <div><span>ISP</span><b>${esc(info.isp)}</b></div>
+      <div><span>Проверено</span><b>${fmtTime(d.checked_at) || new Date().toLocaleTimeString('ru-RU')}</b></div>
+    </div></div>`;
+            toast('IP определён: ' + ip);
+        });
+
+        const loadStats = guard(async () => {
+            const d = await api('/api/v1/proxies/stats');
+            const bars = (obj, useFlag) => {
+                const e = Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                const max = Math.max(...e.map(x => x[1]), 1);
+                return e.length ? e.map(([k, v]) => `<div class="brow"><span>${useFlag ? flag(k) + ' ' : ''}${esc(k)}</span>
+      <div class="bar"><i style="width:${(v / max * 100).toFixed(1)}%"></i></div><b>${v}</b></div>`).join('') : '<div class="empty">—</div>';
+            };
+            $('stProto').innerHTML = bars(d.protocols, false);
+            $('stCountry').innerHTML = bars(d.countries, true);
+            $('sTotal').textContent = d.total; $('sRefresh').textContent = fmtTime(d.last_refresh);
+            $('sTotalSub').textContent = 'интервал: ' + d.cache_update_interval + 's';
+        });
+        const refreshCache = guard(async () => {
+            const d = await api('/api/v1/proxies/refresh', { method: 'POST' });
+            toast('Кэш обновлён: ' + d.total + ' прокси'); checkHealth();
+        });
+
+        /* ---------- tabs & timers ---------- */
+        document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+            document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on'));
+            document.querySelectorAll('.panel').forEach(x => x.classList.remove('on'));
+            b.classList.add('on'); $('tab-' + b.dataset.tab).classList.add('on');
+            if (b.dataset.tab === 'stats' && $('stProto').querySelector('.empty')) loadStats();
+        });
+        setInterval(() => {
+            if (!state.leaseExp) return;
+            const left = Math.max(0, Math.round((state.leaseExp - Date.now()) / 1000));
+            const el = $('ttlLive'); if (el) { el.textContent = left + 's'; el.style.color = left < 60 ? '#fda4af' : '#6ee7b7'; }
+            $('sLease').textContent = left ? left + 's' : 'истекла';
+            if (!left) { state.leaseExp = 0; $('sLeaseSub').textContent = 'TTL истёк'; }
+        }, 1000);
+
+        loadCfg(); ipModeSwitch(); checkHealth();
+        setInterval(checkHealth, 60000);
+    </script>
+</body>
+
+</html>
