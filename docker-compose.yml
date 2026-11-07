@@ -16,7 +16,7 @@ services:
     volumes:
       - proxy-list-data:/data
     environment:
-      TZ: Europe/Moscow
+      TZ: ${TZ:-Europe/Moscow}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/proxies.json', timeout=5)"]
       interval: 60s
@@ -34,12 +34,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      TZ: Europe/Moscow
+      TZ: ${TZ:-Europe/Moscow}
       # Используем внутренние имена сервисов Docker для связи
-      PROXY_SOURCE_URL: "http://proxy-source:8080/proxies.json"
-      REDIS_URL: "redis://redis:6379/0"
-      # API_KEY: "your-secret-key" # Раскомментируйте при необходимости
-      CACHE_UPDATE_INTERVAL: "300"
+      PROXY_SOURCE_URL: "${PROXY_SOURCE_URL:-http://proxy-source:8080/proxies.json}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      API_KEY: "${API_KEY:-}"
+      CACHE_UPDATE_INTERVAL: "${CACHE_UPDATE_INTERVAL:-300}"
     depends_on:
       proxy-source:
         condition: service_healthy
@@ -51,6 +51,22 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # 4. Отдельная раздача веб-интерфейсов админки
+  proxy-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+    container_name: proxy-admin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
 volumes:
   proxy-list-data:

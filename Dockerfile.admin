@@ -1,0 +1,6 @@
+FROM nginx:alpine
+
+COPY admin.html /usr/share/nginx/html/index.html
+COPY admin2.html /usr/share/nginx/html/admin2.html
+
+EXPOSE 80
